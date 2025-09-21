@@ -1,5 +1,5 @@
-#Arsitektur
-
+# Arsitektur
+```
 +----------------+
 |    API Gateway |
 +----------------+
@@ -19,8 +19,9 @@
 | - SQLServer    |
 +----------------+
 
+```
 
-## Jalankan di terminal
+## Manual Debug
 ```
 source venv/Scripts/activate
 uvicorn src.main:app --reload --port 8001
