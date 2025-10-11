@@ -44,13 +44,107 @@ def run_query(sql: str, skip: int = 0, take: int = 100):
 
         # slicing manual
         sliced_rows = rows[skip:skip+take]
-        result_rows = [dict(zip(columns, r)) for r in sliced_rows]
+
+        # --- Trim string values ---
+        result_rows = []
+        for row in sliced_rows:
+            clean_row = {}
+            for col, val in zip(columns, row):
+                if isinstance(val, str):
+                    clean_row[col] = val.strip()
+                else:
+                    clean_row[col] = val
+            result_rows.append(clean_row)
 
         return {
             "columns": columns,
             "rows": result_rows,
-            "totalCount": total_count   # total asli dari COUNT(*)
+            "totalCount": total_count
         }
 
+    finally:
+        conn.close()
+
+
+# --------------------------
+# Non-SELECT query helpers
+# --------------------------
+
+def insert_query(sql: str, params: tuple = ()):
+    if not sql.strip().lower().startswith("insert"):
+        raise ValueError("Only INSERT queries are allowed")
+
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(sql, params)
+        conn.commit()
+
+        # Ambil last inserted row (kalau ada output misalnya pakai OUTPUT INSERTED.*)
+        try:
+            columns = [col[0] for col in cursor.description]
+            rows = cursor.fetchall()
+            result_rows = [dict(zip(columns, r)) for r in rows]
+        except Exception:
+            columns, result_rows = [], []
+
+        return {
+            "message": "insert success",
+            "rows": result_rows
+        }
+
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
+
+
+def update_query(sql: str, params: tuple = ()):
+    if not sql.strip().lower().startswith("update"):
+        raise ValueError("Only UPDATE queries are allowed")
+
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(sql, params)
+        conn.commit()
+
+        try:
+            columns = [col[0] for col in cursor.description]
+            rows = cursor.fetchall()
+            result_rows = [dict(zip(columns, r)) for r in rows]
+        except Exception:
+            columns, result_rows = [], []
+
+        return {
+            "message": "update success",
+            "rows": result_rows
+        }
+
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
+
+
+def delete_query(sql: str, params: tuple = ()):
+    if not sql.strip().lower().startswith("delete"):
+        raise ValueError("Only DELETE queries are allowed")
+
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(sql, params)
+        conn.commit()
+
+        return {
+            "message": "success"
+        }
+
+    except Exception as e:
+        conn.rollback()
+        raise e
     finally:
         conn.close()
