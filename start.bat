@@ -2,7 +2,7 @@
 REM ================================================
 REM  Script untuk start FastAPI app dengan uvicorn
 REM  Menggunakan Python dari bin/python/
-REM  Mode dev/prod dihilangkan
+REM  Port dan worker otomatis baca dari env.yaml
 REM ================================================
 
 REM Set path Python dari folder bin/python
@@ -23,15 +23,18 @@ if not exist venv (
 REM Aktifkan virtual environment
 call venv\Scripts\activate.bat
 
-REM Upgrade pip & install uvicorn kalau belum ada
-python -m pip install --upgrade pip
-pip install uvicorn --quiet
+REM Upgrade pip & install uvicorn + pyyaml kalau belum ada
+python -m pip install --upgrade pip >nul
+pip install uvicorn pyyaml --quiet
 
-REM Minta input port dari user
-set /p PORT=Masukkan port untuk FastAPI (default 8001): 
+REM Baca port dan worker dari env.yaml pakai Python
+for /f "usebackq delims=" %%A in (`python -c "import yaml; c=yaml.safe_load(open('env.yaml'))['sqlserver']; print(c.get('port','8001'))"`) do set PORT=%%A
+for /f "usebackq delims=" %%B in (`python -c "import yaml; c=yaml.safe_load(open('env.yaml'))['sqlserver']; print(c.get('worker','1'))"`) do set WORKER=%%B
+
 if "%PORT%"=="" set PORT=8001
+if "%WORKER%"=="" set WORKER=1
 
-echo [INFO] Menjalankan FastAPI di port %PORT%...
+echo [INFO] Menjalankan Microservice MsSQL 2000 di port %PORT% dengan %WORKER% worker...
 
 REM Jalankan uvicorn production-style
-uvicorn src.main:app --host 0.0.0.0 --port %PORT% --workers 5
+uvicorn src.main:app --host 0.0.0.0 --port %PORT% --workers %WORKER%
